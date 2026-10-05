@@ -35,6 +35,7 @@ The objective is to keep the bouncing ball from falling by moving the paddle hor
 ```text
 BouncyBallGame/
 │
+├── screenshots
 ├── BouncyBallGame.html
 ├── Bounce.mp3
 └── README.md
