@@ -1,4 +1,4 @@
-# Bouncy Ball Game 🎮
+# Bouncy Ball Game
 
 A simple browser-based game built with **HTML, CSS, and JavaScript**.
 
@@ -6,13 +6,13 @@ The objective is to keep the bouncing ball from falling by moving the paddle hor
 
 ## Features
 
-* 🏀 Bouncing ball with collision detection
-* 🖱️ Mouse-controlled paddle
-* 🧮 Score counter for successful hits
-* 🔊 Bounce sound effect
-* 🔄 Restart option after Game Over
-* 📱 Responsive game area that adapts to the browser window
-* 🎨 Gradient-based visual styling and simple animations
+* Bouncing ball with collision detection
+* Mouse-controlled paddle
+* Score counter for successful hits
+* Bounce sound effect
+* Restart option after Game Over
+* Responsive game area that adapts to the browser window
+* Gradient-based visual styling and simple animations
 
 ## Technologies Used
 
