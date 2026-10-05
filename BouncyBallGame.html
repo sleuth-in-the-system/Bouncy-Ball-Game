@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bouncy Ball Game</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            background-color: white;
+            overflow: hidden;
+            font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+        }
+
+        #screen {
+            position: relative;
+            background: linear-gradient(
+            180deg,
+            cadetblue,
+            rgb(91, 151, 153)
+            );
+
+            width: calc(100vw - 16px);
+            height: calc(100vh - 16px);
+
+            margin: 8px;
+
+            overflow: hidden;
+                border-radius: 8px;
+
+            box-shadow:
+                0 4px 12px rgba(0, 0, 0, 0.15),
+                inset 0 0 20px rgba(255, 255, 255, 0.08);
+        }
+
+        #score {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+
+            color: white;
+            font-size: clamp(20px, 2.5vw, 32px);
+
+            text-shadow:
+                2px 2px 3px rgba(0, 0, 0, 0.35);
+
+            z-index: 1;
+        }
+
+        #ball {
+            position: absolute;
+
+            width: clamp(40px, 4.5vw, 60px);
+            height: clamp(40px, 4.5vw, 60px);
+
+            border-radius: 50%;
+
+            background: radial-gradient(
+                circle at 30% 30%,
+                #ffe88a,
+                gold 45%,
+                rgb(153, 131, 4)
+            );
+
+            box-shadow:
+                3px 4px 7px rgba(0, 0, 0, 0.3);
+
+            z-index: 2;
+        }
+
+        #bar {
+            position: absolute;
+
+            width: clamp(140px, 15vw, 200px);
+            height: 20px;
+
+            border-radius: 10px;
+
+            background: linear-gradient(
+                180deg,
+                chocolate,
+                rgb(150, 70, 25)
+            );
+
+            box-shadow:
+                0 3px 5px rgba(0, 0, 0, 0.25);
+
+            bottom: 15px;
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            z-index: 2;
+        }
+
+        #gameover {
+            position: absolute;
+
+            display: none;
+
+            width: min(400px, 75%);
+            height: 250px;
+
+            top: 50%;
+            left: 50%;
+
+            transform: translate(-50%, -50%);
+
+            border-radius: 10px;
+
+            background: lavender;
+
+            text-align: center;
+
+            z-index: 5;
+
+            box-shadow:
+                10px 10px 5px rgba(0, 0, 0, 0.25);
+        }
+
+        #gameover h1 {
+            margin-top: 60px;
+
+            color: chocolate;
+
+            font-family:
+                'Franklin Gothic Medium',
+                'Arial Narrow',
+                Arial,
+                sans-serif;
+        }
+
+        #final-score {
+            color: rgb(70, 70, 70);
+            font-size: 20px;
+        }
+
+        #retry,
+        #bye {
+            border: none;
+            border-radius: 10px;
+
+            background: chocolate;
+
+            height: 35px;
+            width: 70px;
+
+            font-family:
+                'Franklin Gothic Medium',
+                'Arial Narrow',
+                Arial,
+                sans-serif;
+
+            font-size: medium;
+
+            color: lavender;
+
+            cursor: pointer;
+
+            margin: 5px;
+
+            transition:
+                transform 0.15s,
+                background-color 0.15s;
+        }
+
+        #retry:hover,
+        #bye:hover {
+            background-color: rgb(160, 72, 25);
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="screen">
+
+        <div id="score">
+            Score: <span id="score-value">0</span>
+        </div>
+
+        <div id="ball"></div>
+
+        <div id="bar"></div>
+
+        <div id="gameover">
+            <h1>Game Over!!</h1>
+
+            <p id="final-score">
+                Score: 0
+            </p>
+
+            <input
+                type="button"
+                value="Retry?"
+                id="retry"
+            />
+
+            <input
+                type="button"
+                value="Bye :("
+                id="bye"
+            />
+        </div>
+
+    </div>
+
+    <audio id="ball_drop" preload="auto">
+        <source src="Bounce.mp3" type="audio/mpeg">
+    </audio>
+
+
+    <script>
+
+        const screen = document.getElementById('screen');
+        const ball = document.getElementById('ball');
+        const bar = document.getElementById('bar');
+
+        const scoreValue = document.getElementById('score-value');
+        const finalScore = document.getElementById('final-score');
+
+        const gameOver = document.getElementById('gameover');
+
+        const retryButton = document.getElementById('retry');
+        const byeButton = document.getElementById('bye');
+
+        const audio = document.getElementById('ball_drop');
+
+
+        let x;
+        let y;
+
+        let vx;
+        let vy;
+
+        let score = 0;
+
+        let gameRunning = true;
+
+        let lastTime = 0;
+
+
+        /*
+            Generate a random starting velocity.
+        */
+        function getRandomVelocity() {
+
+            let value;
+
+            do {
+                value = Math.floor(Math.random() * 6) + 2;
+            }
+            while (value === 0);
+
+            return value;
+        }
+
+
+        /*
+            Play bounce sound.
+
+            currentTime = 0 allows the sound to restart
+            immediately on repeated collisions.
+        */
+        function playBounceSound() {
+
+            audio.currentTime = 0;
+
+            audio.play().catch(() => {
+                /*
+                    Browsers may block audio until the user
+                    interacts with the page.
+                */
+            });
+        }
+
+
+        /*
+            Set the ball's starting position and velocity.
+        */
+        function initializeBall() {
+
+            const screenWidth = screen.clientWidth;
+            const screenHeight = screen.clientHeight;
+
+            const ballWidth = ball.offsetWidth;
+            const ballHeight = ball.offsetHeight;
+
+            x = screenWidth / 2 - ballWidth / 2;
+
+            y = screenHeight / 3;
+
+            vx = getRandomVelocity();
+
+            /*
+                Randomize horizontal direction.
+            */
+            if (Math.random() < 0.5) {
+                vx = -vx;
+            }
+
+            vy = getRandomVelocity();
+
+            /*
+                Ball should initially move downward.
+            */
+            vy = Math.abs(vy);
+
+            ball.style.left = `${x}px`;
+            ball.style.top = `${y}px`;
+        }
+
+
+        /*
+            Move the paddle according to the mouse position.
+        */
+        function movePaddle(event) {
+
+            const screenRect = screen.getBoundingClientRect();
+
+            const paddleWidth = bar.offsetWidth;
+
+            let mouseX = event.clientX - screenRect.left;
+
+            let paddleX = mouseX - paddleWidth / 2;
+
+            /*
+                Keep paddle inside the game area.
+            */
+            const maximumX =
+                screen.clientWidth - paddleWidth;
+
+            paddleX = Math.max(
+                0,
+                Math.min(paddleX, maximumX)
+            );
+
+            bar.style.left = `${paddleX}px`;
+
+            /*
+                We no longer use transform to center the paddle.
+            */
+            bar.style.transform = 'none';
+        }
+
+
+        /*
+            Update score after a successful paddle hit.
+        */
+        function increaseScore() {
+
+            score++;
+
+            scoreValue.textContent = score;
+        }
+
+
+        /*
+            End the game.
+        */
+        function endGame() {
+
+            gameRunning = false;
+
+            ball.style.display = 'none';
+
+            finalScore.textContent =
+                `Score: ${score}`;
+
+            gameOver.style.display = 'block';
+
+            audio.pause();
+        }
+
+
+        /*
+            Main game loop.
+        */
+        function bounce(timestamp) {
+
+            if (!gameRunning) {
+                return;
+            }
+
+            /*
+                Keep movement reasonably consistent across
+                different refresh rates.
+            */
+            if (!lastTime) {
+                lastTime = timestamp;
+            }
+
+            const deltaTime =
+                Math.min(timestamp - lastTime, 30);
+
+            lastTime = timestamp;
+
+            /*
+                Movement multiplier.
+                The original game updated approximately
+                every 10 ms, so this keeps a similar speed.
+            */
+            const movement =
+                deltaTime / 10;
+
+
+            const screenWidth = screen.clientWidth;
+            const screenHeight = screen.clientHeight;
+
+            const ballWidth = ball.offsetWidth;
+            const ballHeight = ball.offsetHeight;
+
+
+            /*
+                Move ball.
+            */
+            x += vx * movement;
+            y += vy * movement;
+
+
+            /*
+                Left and right walls.
+            */
+            if (x <= 0) {
+
+                x = 0;
+
+                vx = Math.abs(vx);
+
+                playBounceSound();
+            }
+
+            else if (x + ballWidth >= screenWidth) {
+
+                x = screenWidth - ballWidth;
+
+                vx = -Math.abs(vx);
+
+                playBounceSound();
+            }
+
+
+            /*
+                Top wall.
+            */
+            if (y <= 0) {
+
+                y = 0;
+
+                vy = Math.abs(vy);
+
+                playBounceSound();
+            }
+
+
+            /*
+                Paddle collision.
+            */
+            const paddleX = bar.offsetLeft;
+
+            const paddleY = bar.offsetTop;
+
+            const paddleWidth = bar.offsetWidth;
+
+            const paddleHeight = bar.offsetHeight;
+
+
+            const ballBottom =
+                y + ballHeight;
+
+
+            const horizontalCollision =
+                x + ballWidth >= paddleX &&
+                x <= paddleX + paddleWidth;
+
+
+            const verticalCollision =
+                ballBottom >= paddleY &&
+                y <= paddleY + paddleHeight;
+
+
+            /*
+                Only count a collision while the ball is
+                moving downward.
+            */
+            if (
+                vy > 0 &&
+                horizontalCollision &&
+                verticalCollision
+            ) {
+
+                y = paddleY - ballHeight;
+
+                vy = -Math.abs(vy);
+
+                increaseScore();
+
+                playBounceSound();
+            }
+
+
+            /*
+                Ball missed the paddle.
+            */
+            if (y + ballHeight >= screenHeight) {
+
+                endGame();
+
+                return;
+            }
+
+
+            /*
+                Update visual position.
+            */
+            ball.style.left = `${x}px`;
+            ball.style.top = `${y}px`;
+
+
+            requestAnimationFrame(bounce);
+        }
+
+
+        /*
+            Restart the game.
+        */
+        function restartGame() {
+
+            score = 0;
+
+            scoreValue.textContent = score;
+
+            finalScore.textContent = 'Score: 0';
+
+            gameOver.style.display = 'none';
+
+            ball.style.display = 'block';
+
+            gameRunning = true;
+
+            lastTime = 0;
+
+            initializeBall();
+
+            requestAnimationFrame(bounce);
+        }
+
+
+        /*
+            Handle browser resizing.
+        */
+        function handleResize() {
+
+            if (!gameRunning) {
+                return;
+            }
+
+            const screenWidth = screen.clientWidth;
+            const screenHeight = screen.clientHeight;
+
+            const ballWidth = ball.offsetWidth;
+            const ballHeight = ball.offsetHeight;
+
+
+            /*
+                Prevent the ball from ending up outside
+                the new game boundaries.
+            */
+            x = Math.max(
+                0,
+                Math.min(
+                    x,
+                    screenWidth - ballWidth
+                )
+            );
+
+            y = Math.max(
+                0,
+                Math.min(
+                    y,
+                    screenHeight - ballHeight
+                )
+            );
+
+
+            /*
+                Keep paddle inside the new width.
+            */
+            const paddleWidth = bar.offsetWidth;
+
+            let paddleX = bar.offsetLeft;
+
+            paddleX = Math.max(
+                0,
+                Math.min(
+                    paddleX,
+                    screenWidth - paddleWidth
+                )
+            );
+
+            bar.style.left = `${paddleX}px`;
+        }
+
+
+        /*
+            Event listeners.
+        */
+        screen.addEventListener(
+            'mousemove',
+            movePaddle
+        );
+
+        window.addEventListener(
+            'resize',
+            handleResize
+        );
+
+        retryButton.addEventListener(
+            'click',
+            restartGame
+        );
+
+        byeButton.addEventListener(
+            'click',
+            () => {
+                window.close();
+            }
+        );
+
+
+        /*
+            Start game.
+        */
+        initializeBall();
+
+        requestAnimationFrame(bounce);
+
+    </script>
+
+</body>
+</html>
